@@ -71,19 +71,21 @@ class my_top_block(gr.top_block):
 
 def main():
 
-    global n_rcvd, n_right
+    global n_rcvd, n_right, rcv_buffer
         
     n_rcvd = 0
     n_right = 0
-
+    rcv_buffer = list()
     def rx_callback(ok, payload):
-        global n_rcvd, n_right
+        global n_rcvd, n_right, rcv_buffer
         n_rcvd += 1
         (pktno,) = struct.unpack('!H', payload[0:2])
         if ok:
             n_right += 1
-            print 'pktno=', pktno, '  payload=', payload[2:]
+            rcv_buffer.append((pktno, payload))
+#            print 'pktno=', pktno, '  payload=', payload[2:]
         print "ok: %r \t pktno: %d \t n_rcvd: %d \t n_right: %d" % (ok, pktno, n_rcvd, n_right)
+
     def send_pkt(payload='', eof=False):
         return tb.txpath.send_pkt(payload, eof)
 
@@ -128,7 +130,7 @@ def main():
 
     tb.start()                      # start flow graph
 #trans
-    nbytes = int(1e6 * options.megabytes)
+    nbytes = int(1e3 * options.megabytes)
     n = 0
     pktno = 0
     pkt_size = int(options.size)
@@ -136,7 +138,7 @@ def main():
     while n < nbytes:
         if options.from_file is None:
 #            data = (pkt_size - 2) * (pktno & 0xff) 
-             data = (pkt_size - 2) * 'a' 
+             data = 'hellognuradio' 
         else:
             data = source_file.read(pkt_size - 2)
             if data == '':
@@ -154,6 +156,11 @@ def main():
 #        print pktno, ' '
         
     send_pkt(eof=True)
+    while 1:
+        while len(rcv_buffer) > 0:
+            (pktno, payload) = rcv_buffer.pop(0)
+            print 'pktno = ', pktno, 'payload = ', payload[2:]
+
 
     tb.wait()                       # wait for it to finish
 
