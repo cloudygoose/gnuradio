@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 #
+# author:htx
+# combine benchmark_tx and benmark_rx
 # Copyright 2006,2007,2011 Free Software Foundation, Inc.
 # 
 # This file is part of GNU Radio
@@ -33,6 +35,7 @@ from gnuradio import digital
 # from current dir
 from receive_path import receive_path
 from uhd_interface import uhd_receiver
+from transmit_path import transmit_path
 from uhd_interface import uhd_transmitter
 
 import struct, sys
@@ -97,6 +100,8 @@ def main():
             n_right += 1
             print 'payload=', load[2:]
         print "ok: %r \t pktno: %d \t n_rcvd: %d \t n_right: %d" % (ok, pktno, n_rcvd, n_right)
+    def send_pkt(payload='', eof=False):
+        return tb.txpath.send_pkt(payload, eof)
 
     parser = OptionParser(option_class=eng_option, conflict_handler="resolve")
     expert_grp = parser.add_option_group("Expert")
@@ -105,9 +110,22 @@ def main():
     parser.add_option("","--from-file", default=None,
                       help="input file of samples to demod")
 
+    parser.add_option("","--to-file", default=None,
+                      help="Output file for modulated samples")
+    parser.add_option("-s", "--size", type="eng_float", default=400,
+                      help="set packet size [default=%default]")
+    parser.add_option("-M", "--megabytes", type="eng_float", default=1.0,
+                      help="set megabytes to transmit [default=%default]")
+
+
+#rcv
     receive_path.add_options(parser, expert_grp)
     uhd_receiver.add_options(parser)
     digital.ofdm_demod.add_options(parser, expert_grp)
+#trans
+    transmit_path.add_options(parser, expert_grp)
+    digital.ofdm_mod.add_options(parser, expert_grp)
+    uhd_transmitter.add_options(parser)
 
     (options, args) = parser.parse_args ()
 
@@ -125,6 +143,34 @@ def main():
         print "Warning: failed to enable realtime scheduling"
 
     tb.start()                      # start flow graph
+#trans
+    nbytes = int(1e6 * options.megabytes)
+    n = 0
+    pktno = 0
+    pkt_size = int(options.size)
+
+    while n < nbytes:
+        if options.from_file is None:
+#            data = (pkt_size - 2) * (pktno & 0xff) 
+             data = (pkt_size - 2) * 'a' 
+        else:
+            data = source_file.read(pkt_size - 2)
+            if data == '':
+                break;
+
+        payload = struct.pack('!H', pktno & 0xffff) + data
+        
+        send_pkt(payload)
+        n += len(payload)
+#       sys.stderr.write('.')
+        print 'transmitting pktno = ', pktno
+        if options.discontinuous and pktno % 5 == 4:
+            time.sleep(1)
+        pktno += 1
+#        print pktno, ' '
+        
+    send_pkt(eof=True)
+
     tb.wait()                       # wait for it to finish
 
 if __name__ == '__main__':
