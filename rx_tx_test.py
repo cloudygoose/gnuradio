@@ -1,25 +1,9 @@
 #!/usr/bin/env python
 #
 # author:htx
-# combine benchmark_tx and benmark_rx
-# Copyright 2006,2007,2011 Free Software Foundation, Inc.
-# 
-# This file is part of GNU Radio
-# 
-# GNU Radio is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 3, or (at your option)
-# any later version.
-# 
-# GNU Radio is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-# 
-# You should have received a copy of the GNU General Public License
-# along with GNU Radio; see the file COPYING.  If not, write to
-# the Free Software Foundation, Inc., 51 Franklin Street,
-# Boston, MA 02110-1301, USA.
+# combine benchmark_tx and benmark_rx from gnuradio examples
+# first start listenning , at the same time, start transmitting some packets(i.e AAAAAA), 
+# then the listenning callback will listen the packets itself transmitted
 # 
 
 from gnuradio import gr, blks2
@@ -98,7 +82,7 @@ def main():
         (pktno,) = struct.unpack('!H', payload[0:2])
         if ok:
             n_right += 1
-            print 'payload=', load[2:]
+            print 'pktno=', pktno, '  payload=', payload[2:]
         print "ok: %r \t pktno: %d \t n_rcvd: %d \t n_right: %d" % (ok, pktno, n_rcvd, n_right)
     def send_pkt(payload='', eof=False):
         return tb.txpath.send_pkt(payload, eof)
