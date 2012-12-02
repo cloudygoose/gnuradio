@@ -25,18 +25,22 @@ from gnuradio import eng_notation
 from gnuradio.eng_option import eng_option
 from optparse import OptionParser
 
+import time, struct, sys
+
+
 from gnuradio import digital
 
 # from current dir
 from receive_path import receive_path
 from uhd_interface import uhd_receiver
+from uhd_interface import uhd_transmitter
 
 import struct, sys
 
 class my_top_block(gr.top_block):
     def __init__(self, callback, options):
         gr.top_block.__init__(self)
-
+#rec
         if(options.rx_freq is not None):
             self.source = uhd_receiver(options.args,
                                        options.bandwidth,
@@ -54,7 +58,25 @@ class my_top_block(gr.top_block):
         self.rxpath = receive_path(callback, options)
 
         self.connect(self.source, self.rxpath)
+#trans
+        if(options.tx_freq is not None):
+            self.sink = uhd_transmitter(options.args,
+                                        options.bandwidth,
+                                        options.tx_freq, options.tx_gain,
+                                        options.spec, options.antenna,
+                                        options.verbose)
+        elif(options.to_file is not None):
+            self.sink = gr.file_sink(gr.sizeof_gr_complex, options.to_file)
+        else:
+            self.sink = gr.null_sink(gr.sizeof_gr_complex)
+
+        # do this after for any adjustments to the options that may
+        # occur in the sinks (specifically the UHD sink)
+        self.txpath = transmit_path(options)
+
+        self.connect(self.txpath, self.sink)
         
+
 
 # /////////////////////////////////////////////////////////////////////////////
 #                                   main
@@ -73,20 +95,8 @@ def main():
         (pktno,) = struct.unpack('!H', payload[0:2])
         if ok:
             n_right += 1
-            print payload[2:]
+            print 'payload=', load[2:]
         print "ok: %r \t pktno: %d \t n_rcvd: %d \t n_right: %d" % (ok, pktno, n_rcvd, n_right)
-
-        if 0:
-            printlst = list()
-            for x in payload[2:]:
-                t = hex(ord(x)).replace('0x', '')
-                if(len(t) == 1):
-                    t = '0' + t
-                printlst.append(t)
-            printable = ''.join(printlst)
-
-            print printable
-            print "\n"
 
     parser = OptionParser(option_class=eng_option, conflict_handler="resolve")
     expert_grp = parser.add_option_group("Expert")
