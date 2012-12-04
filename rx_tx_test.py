@@ -130,38 +130,44 @@ def main():
 
     tb.start()                      # start flow graph
 #trans
-    nbytes = int(1e3 * options.megabytes)
+    nbytes = int(1e4 * options.megabytes)
     n = 0
     pktno = 0
     pkt_size = int(options.size)
 
-    while n < nbytes:
-        if options.from_file is None:
-#            data = (pkt_size - 2) * (pktno & 0xff) 
-             data = 'hellognuradio' 
-        else:
-            data = source_file.read(pkt_size - 2)
-            if data == '':
-                break;
+    if 1:
+        while n < nbytes:
+            if options.from_file is None:
+                #data = (pkt_size - 2) * (pktno & 0xff) 
+                data = 'hellognuradio' 
+            else:
+                data = source_file.read(pkt_size - 2)
+                if data == '':
+                    break;
 
-        payload = struct.pack('!H', pktno & 0xffff) + data
+            payload = struct.pack('!H', pktno & 0xffff) + data
         
-        send_pkt(payload)
-        n += len(payload)
-#       sys.stderr.write('.')
-        print 'transmitting pktno = ', pktno
-        if options.discontinuous and pktno % 5 == 4:
-            time.sleep(1)
-        pktno += 1
-#        print pktno, ' '
-        
+            send_pkt(payload)
+            n += len(payload)
+            #sys.stderr.write('.')
+            print 'transmitting pktno = ', pktno
+            #if options.discontinuous and pktno % 5 == 4:
+            #time.sleep(0.1)
+            pktno += 1
+            #print pktno, ' '
+            
     send_pkt(eof=True)
+    last_rcv_time = time.clock()
     while 1:
         while len(rcv_buffer) > 0:
             (pktno, payload) = rcv_buffer.pop(0)
             print 'pktno = ', pktno, 'payload = ', payload[2:]
-
-
+        now = time.clock()
+        #if not sleep, it seems it will chew up all CPU!
+        time.sleep(0.3)
+        if (now - last_rcv_time > 2):
+           break
+    print '###############################TEST tx_rx_self FINISHED####################################'
     tb.wait()                       # wait for it to finish
 
 if __name__ == '__main__':
