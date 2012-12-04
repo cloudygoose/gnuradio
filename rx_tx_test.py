@@ -85,6 +85,7 @@ def main():
             rcv_buffer.append((pktno, payload))
 #            print 'pktno=', pktno, '  payload=', payload[2:]
         print "ok: %r \t pktno: %d \t n_rcvd: %d \t n_right: %d" % (ok, pktno, n_rcvd, n_right)
+#       print ' received ', 
 
     def send_pkt(payload='', eof=False):
         return tb.txpath.send_pkt(payload, eof)
@@ -130,7 +131,7 @@ def main():
 
     tb.start()                      # start flow graph
 #trans
-    nbytes = int(1e4 * options.megabytes)
+    nbytes = int(1e3 * options.megabytes)
     n = 0
     pktno = 0
     pkt_size = int(options.size)
@@ -149,12 +150,8 @@ def main():
         
             send_pkt(payload)
             n += len(payload)
-            #sys.stderr.write('.')
             print 'transmitting pktno = ', pktno
-            #if options.discontinuous and pktno % 5 == 4:
-            #time.sleep(0.1)
             pktno += 1
-            #print pktno, ' '
             
     send_pkt(eof=True)
     last_rcv_time = time.clock()
@@ -167,7 +164,13 @@ def main():
         time.sleep(0.3)
         if (now - last_rcv_time > 2):
            break
-    print '###############################TEST tx_rx_self FINISHED####################################'
+    print '########################TEST tx_rx_self FINISHED################################'
+    print '########################NOW BEGIN TESTING carrier sense##########################'
+    tb.rxpath.set_carrier_threshold(2)
+    print 'threshold = ', tb.rxpath.carrier_threshold()
+    while 1:
+        print 'carrier sense : ', tb.rxpath.carrier_sensed()
+        time.sleep(0.1)
     tb.wait()                       # wait for it to finish
 
 if __name__ == '__main__':

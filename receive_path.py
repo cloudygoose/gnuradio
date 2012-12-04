@@ -64,8 +64,8 @@ class receive_path(gr.hier_block2):
         """
         Return True if we think carrier is present.
         """
-        #return self.probe.level() > X
-        return self.probe.unmuted()
+        return self.probe.level()
+#        return self.probe.unmuted()
 
     def carrier_threshold(self):
         """
